@@ -1,3 +1,6 @@
+using System;
+using System.Windows;
+
 namespace MechwarriorVRLauncher
 {
     public partial class App : Application

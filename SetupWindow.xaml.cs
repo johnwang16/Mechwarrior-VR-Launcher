@@ -1,4 +1,13 @@
 using MechwarriorVRLauncher.Services;
+using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Navigation;
 
 namespace MechwarriorVRLauncher
 {

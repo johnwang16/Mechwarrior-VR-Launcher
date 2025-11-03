@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Windows;
+
 namespace MechwarriorVRLauncher
 {
     public partial class ConfirmationDialog : Window
