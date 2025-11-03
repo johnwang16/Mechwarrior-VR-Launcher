@@ -1,0 +1,5 @@
+<Project>
+  <Target Name="ExpandPriContent" />
+  <Target Name="_GeneratePrisForResourcePack" />
+  <Target Name="_GeneratePrisForPortableLibraries" />
+</Project>

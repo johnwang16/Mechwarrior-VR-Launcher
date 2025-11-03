@@ -1,0 +1,56 @@
+{
+  // Mod checks - validate mod presence and versions
+  // Format: { "mod": "ModName", "version": "1.0", "isRequired": true }
+  // - isRequired: optional boolean (default: false) - if true, mod must be installed
+  // - version: optional string - if specified and mod exists, version will be checked
+  "modChecks": [
+    {
+      "mod": "MW5 Compatibility Pack",
+      "isRequired": true
+    },
+    {
+      "mod": "MechWarriorVR",
+      "isRequired": true
+    },
+    {
+      "mod": "MechWarriorVR_Overrides",
+      "isRequired": true
+    },
+    {
+      "mod": "MechWarriorVR_Cockpits",
+      "isRequired": true
+    }
+  ],
+  // Blacklisted/incompatible mods (case-insensitive)
+  "blacklist": [
+    "Faction Standing Tweaks"
+  ],
+  // Load order chains - for sequential loading
+  // Format: ["First", "Second", "Third", "Fourth"]
+  // Ensures First loads before Second, Second before Third, etc.
+  // Multiple chains may be specified
+  "loadOrderChains": [
+    [
+      "MW5 Compatibility Pack",
+      "MechWarriorVR",
+      "MechWarriorVR_Overrides",
+      "MechWarriorVR_Cockpits"
+    ]
+  ],
+  // Individual rules - for one-off dependencies
+  "orderRules": [
+    {
+      "mod": "MechWarriorVR",
+      "mustLoadAfter": [
+        "XenoPax Optimize 4.0"
+      ]
+    },
+    {
+      "mod": "MechwarriorVR",
+      "mustLoadAfter": [
+        "XenoPax Art Optimizer 3.0",
+        "Faction Standing Tweaks"
+      ]
+    }
+  ]
+}

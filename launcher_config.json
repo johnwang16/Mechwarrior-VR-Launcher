@@ -1,0 +1,11 @@
+{
+  "mechwarriorModsDirectory": "",
+  "uevrInstallDirectory": "",
+  "uevrConfigDirectory": "%APPDATA%\\UnrealVRMod\\MechWarrior-Win64-Shipping",
+  "uevrZipFile": "",
+  "uevrConfigFile": "",
+  "showCursorKeyCode": 36,
+  "menuKeyCode": 45,
+  "resetViewKeyCode": 120,
+  "modZipFiles": []
+}
