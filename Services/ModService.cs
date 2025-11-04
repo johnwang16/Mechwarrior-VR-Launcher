@@ -276,7 +276,7 @@ namespace MechwarriorVRLauncher.Services
             return violations;
         }
 
-        public List<ModInfo> ScanInstalledMods(string modsDirectory, Action<string>? additionalLogger = null)
+        public List<ModInfo> ScanInstalledMods(string modsDirectory)
         {
             var modInfos = new List<ModInfo>();
 
@@ -286,7 +286,6 @@ namespace MechwarriorVRLauncher.Services
             void Log(string message)
             {
                 _loggingService.LogMessage(message);
-                additionalLogger?.Invoke(message);
             }
 
             try

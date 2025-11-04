@@ -48,20 +48,37 @@ namespace MechwarriorVRLauncher
             // Check if SteamVR is available
             CheckSteamVRAvailability();
 
-            // Display any buffered log messages
-            DisplayBufferedLogs();
+            // Register this window as the log handler
+            var loggingService = _mainWindow.GetLoggingService();
+            loggingService.SetLogHandler(AppendLogToWindow);
+
+            // Display and flush any buffered log messages
+            DisplayAndFlushBufferedLogs(loggingService);
 
             // Scan installed mods when window opens
             _mainWindow.ScanInstalledMods(this);
         }
 
-        private void DisplayBufferedLogs()
+        private void DisplayAndFlushBufferedLogs(LoggingService loggingService)
         {
-            var bufferedLogs = _mainWindow.GetLogBuffer();
+            var bufferedLogs = loggingService.FlushBuffer();
             foreach (var log in bufferedLogs)
             {
                 LogTextBox.Text += log + "\n";
             }
+        }
+
+        private void AppendLogToWindow(string formattedMessage)
+        {
+            LogTextBox.Text += formattedMessage + "\n";
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            // Unregister the log handler when window closes
+            var loggingService = _mainWindow.GetLoggingService();
+            loggingService.ClearLogHandler();
+            base.OnClosed(e);
         }
 
         private void CheckSteamVRAvailability()
@@ -373,12 +390,9 @@ namespace MechwarriorVRLauncher
 
         public void LogMessage(string message)
         {
-            var timestamp = DateTime.Now.ToString("HH:mm:ss");
-            var formattedMessage = $"[{timestamp}] {message}";
-            LogTextBox.Text += formattedMessage + "\n";
-
-            // Also store in MainWindow buffer so logs persist across window open/close
-            _mainWindow.AddToLogBuffer(formattedMessage);
+            // Use the LoggingService which will handle window/buffer routing
+            var loggingService = _mainWindow.GetLoggingService();
+            loggingService.LogMessage(message);
         }
 
         private void ShowErrorDialog(string title, string message)
@@ -399,8 +413,34 @@ namespace MechwarriorVRLauncher
         // Browse and Auto-Detect Event Handlers
         private void AutoDetectModsButton_Click(object sender, RoutedEventArgs e)
         {
+            // Open the context menu below the button
+            var button = sender as Button;
+            if (button?.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void AutoDetectAll_Click(object sender, RoutedEventArgs e)
+        {
             UpdateConfig(); // Save current UI state to config
-            _mainWindow.AutoDetectModsDirectory(this);
+            _mainWindow.AutoDetectModsDirectory(this, null);
+            LoadUIFromConfig(); // Reload UI from updated config
+        }
+
+        private void AutoDetectSteam_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateConfig(); // Save current UI state to config
+            _mainWindow.AutoDetectModsDirectory(this, "Steam");
+            LoadUIFromConfig(); // Reload UI from updated config
+        }
+
+        private void AutoDetectGOG_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateConfig(); // Save current UI state to config
+            _mainWindow.AutoDetectModsDirectory(this, "GOG");
             LoadUIFromConfig(); // Reload UI from updated config
         }
 

@@ -12,7 +12,7 @@ namespace MechwarriorVRLauncher.Models
         public string UEVRInstallDirectory { get; set; } = string.Empty;
 
         [JsonPropertyName("uevrConfigDirectory")]
-        public string UEVRConfigDirectory { get; set; } = string.Empty;
+        public string UEVRConfigDirectory { get; set; } = Constants.DefaultUevrConfigPath;
 
         [JsonPropertyName("uevrZipFile")]
         public string UEVRZipFile { get; set; } = string.Empty;

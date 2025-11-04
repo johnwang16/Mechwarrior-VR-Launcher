@@ -10,7 +10,6 @@ namespace MechwarriorVRLauncher
         // File/Folder Markers
         public const string VortexMarkerFile = "__folder_managed_by_vortex";
         public const string ModJsonFile = "mod.json";
-        public const string ModBlacklistFile = "blacklist.txt";
         public const string ModValidationRulesFile = "mwvr_mod_validation_rules.json";
         public const string UevrConfigFile = "config.txt";
         public const string MechWarriorShippingName = "MechWarrior-Win64-Shipping";
@@ -46,7 +45,6 @@ namespace MechwarriorVRLauncher
 
         // Steam Constants
         public const string Mw5AppId = "784080";
-        public const string Mw5FolderName = "MechWarrior 5 Mercenaries";
 
         // Steam Registry Paths
         public const string SteamRegistryPathCurrentUser = @"Software\Valve\Steam";
@@ -55,7 +53,6 @@ namespace MechwarriorVRLauncher
         public const string SteamRegistryValueInstallPath = "InstallPath";
 
         // Steam Directory Names
-        public const string SteamFolderName = "Steam";
         public const string SteamAppsFolder = "steamapps";
         public const string SteamCommonFolder = "common";
         public const string SteamLibraryFoldersFile = "libraryfolders.vdf";
@@ -90,6 +87,11 @@ namespace MechwarriorVRLauncher
         // Download URLs
         public const string MechWarriorVrNexusModsUrl = "https://www.nexusmods.com/mechwarrior5mercenaries/mods/1009";
         public const string UevrGitHubReleasesUrl = "https://github.com/praydog/UEVR/releases";
+
+        // GOG Constants
+        public const string GogMw5GameId = "1744110647";
+        public const string GogRegistryPath = @"SOFTWARE\WOW6432Node\GOG.com\Games";
+        public const string GogRegistryValuePath = "path";
 
     }
 }

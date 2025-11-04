@@ -207,10 +207,19 @@
                              Margin="0,0,10,0"/>
                     <Button x:Name="AutoDetectModsButton"
                             Grid.Column="1"
-                            Content="Auto-Detect"
+                            Content="Auto-Detect ▼"
                             Click="AutoDetectModsButton_Click"
                             Margin="0,0,10,0"
-                            Padding="10,5"/>
+                            Padding="10,5">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="AutoDetectContextMenu">
+                                <MenuItem Header="Auto-Detect (All Platforms)" Click="AutoDetectAll_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Steam Only" Click="AutoDetectSteam_Click"/>
+                                <MenuItem Header="GOG Only" Click="AutoDetectGOG_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                     <Button x:Name="BrowseModsButton"
                             Grid.Column="2"
                             Content="Browse..."

@@ -8,52 +8,49 @@ using System.Threading.Tasks;
 
 namespace MechwarriorVRLauncher.Services
 {
-    public class SteamService
+    public class SteamService : GamePlatformService
     {
-        private readonly LoggingService _loggingService;
+        public override string PlatformName => "Steam";
 
-        public SteamService(LoggingService loggingService)
+        public SteamService(LoggingService loggingService) : base(loggingService)
         {
-            _loggingService = loggingService;
         }
 
-        public string? DetectMechWarriorModsDirectory()
+        protected override bool IsPlatformInstalled()
+        {
+            // Check if Steam is installed by looking for registry keys or Steam folder
+            return !string.IsNullOrEmpty(GetSteamInstallPath());
+        }
+
+        protected override string? GetGameInstallPath()
         {
             // Try to find Steam installation
             var steamPath = GetSteamInstallPath();
             if (string.IsNullOrEmpty(steamPath))
             {
+                _loggingService.LogMessage("Steam installation not found");
                 return null;
             }
 
+            _loggingService.LogMessage($"Steam installation found at: {steamPath}");
+
             // Get all Steam library folders
             var libraryFolders = GetSteamLibraryFolders(steamPath);
+            _loggingService.LogMessage($"Found {libraryFolders.Count} Steam library folder(s)");
 
             // Search for MechWarrior 5 in each library folder
             foreach (var libraryFolder in libraryFolders)
             {
+                _loggingService.LogMessage($"Checking library: {libraryFolder}");
                 var mw5Path = FindMW5InLibrary(libraryFolder);
                 if (!string.IsNullOrEmpty(mw5Path))
                 {
-                    // Mods directory is typically in the game root
-                    var modsPath = Path.Combine(mw5Path, Constants.Mw5ModsFolder);
-
-                    // Also check the common alternative location
-                    if (!Directory.Exists(modsPath))
-                    {
-                        modsPath = Path.Combine(mw5Path, Constants.Mw5MercsFolder, Constants.Mw5ModsFolder);
-                    }
-
-                    if (Directory.Exists(modsPath))
-                    {
-                        return modsPath;
-                    }
-
-                    // Return the base path even if Mods folder doesn't exist yet
-                    return Path.Combine(mw5Path, Constants.Mw5ModsFolder);
+                    _loggingService.LogMessage($"Found MechWarrior 5 in Steam library at: {mw5Path}");
+                    return mw5Path;
                 }
             }
 
+            _loggingService.LogMessage("MechWarrior 5 not found in Steam library");
             return null;
         }
 
@@ -117,21 +114,6 @@ namespace MechwarriorVRLauncher.Services
                 // Ignore registry errors
             }
 
-            // Try common default locations
-            var defaultPaths = new[]
-            {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), Constants.SteamFolderName),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Constants.SteamFolderName)
-            };
-
-            foreach (var path in defaultPaths)
-            {
-                if (Directory.Exists(path))
-                {
-                    return path;
-                }
-            }
-
             return null;
         }
 
@@ -178,26 +160,41 @@ namespace MechwarriorVRLauncher.Services
         {
             // Check by App ID in appmanifest file - this is the authoritative method
             var manifestPath = Path.Combine(steamAppsPath, $"{Constants.SteamAppManifestPrefix}{Constants.Mw5AppId}{Constants.SteamAppManifestSuffix}");
-            if (File.Exists(manifestPath))
+
+            if (!File.Exists(manifestPath))
             {
-                try
+                _loggingService.LogMessage($"  App manifest not found (game not installed in this library)");
+                return null;
+            }
+
+            _loggingService.LogMessage($"  Found app manifest for MechWarrior 5");
+
+            try
+            {
+                var content = File.ReadAllText(manifestPath);
+                var match = Regex.Match(content, Constants.SteamVdfInstalldirPattern);
+                if (match.Success)
                 {
-                    var content = File.ReadAllText(manifestPath);
-                    var match = Regex.Match(content, Constants.SteamVdfInstalldirPattern);
-                    if (match.Success)
+                    var installDir = match.Groups[1].Value;
+                    var gamePath = Path.Combine(steamAppsPath, Constants.SteamCommonFolder, installDir);
+                    if (Directory.Exists(gamePath))
                     {
-                        var installDir = match.Groups[1].Value;
-                        var gamePath = Path.Combine(steamAppsPath, Constants.SteamCommonFolder, installDir);
-                        if (Directory.Exists(gamePath))
-                        {
-                            return gamePath;
-                        }
+                        _loggingService.LogMessage($"  Verified game directory exists");
+                        return gamePath;
+                    }
+                    else
+                    {
+                        _loggingService.LogMessage($"  Game directory not found at expected location: {gamePath}");
                     }
                 }
-                catch
+                else
                 {
-                    // If we can't read the manifest, fail detection
+                    _loggingService.LogMessage($"  Could not parse install directory from manifest");
                 }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogMessage($"  Error reading manifest: {ex.Message}");
             }
 
             return null;

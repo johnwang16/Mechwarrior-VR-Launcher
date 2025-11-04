@@ -22,6 +22,7 @@ namespace MechwarriorVRLauncher
         private readonly ConfigService _configService;
         private readonly ZipExtractionService _zipService;
         private readonly SteamService _steamService;
+        private readonly List<IGamePlatformService> _platformServices;
         private readonly LoggingService _loggingService;
         private readonly UEVRService _uevrService;
         private readonly KeycodeService _keycodeService;
@@ -43,6 +44,13 @@ namespace MechwarriorVRLauncher
             _modService = new ModService(_loggingService);
             _zipService.ProgressChanged += OnZipProgressChanged;
             _currentConfig = new LauncherConfig();
+
+            // Initialize platform services list with all supported platforms
+            _platformServices = new List<IGamePlatformService>
+            {
+                _steamService,
+                new GOGService(_loggingService)
+            };
 
             this.Loaded += MainWindow_Loaded;
 
@@ -147,68 +155,11 @@ namespace MechwarriorVRLauncher
                     AutoDetectModsDirectory();
                 }
 
-                // Auto-detect zip files in application directory
-                AutoDetectZipFiles();
-
                 LogMessage("Configuration loaded successfully");
             }
             catch (Exception ex)
             {
                 LogMessage($"Error loading config: {ex.Message}");
-            }
-        }
-
-        private void AutoDetectZipFiles()
-        {
-            try
-            {
-                var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                var zipFiles = Directory.GetFiles(appDirectory, "*.zip");
-
-                if (zipFiles.Length > 0)
-                {
-                    LogMessage($"Searching for zip files in: {appDirectory}");
-                    LogMessage($"Found {zipFiles.Length} zip file(s) in application directory:");
-
-                    foreach (var zipFile in zipFiles)
-                    {
-                        var fileName = Path.GetFileName(zipFile);
-
-                        // Skip the launcher config if it's a zip
-                        if (fileName.Equals("launcher_config.zip", StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        // Check if this looks like a UEVR zip
-                        if (fileName.Contains("UEVR", StringComparison.OrdinalIgnoreCase) &&
-                            !fileName.Contains("Config", StringComparison.OrdinalIgnoreCase) &&
-                            string.IsNullOrEmpty(_currentConfig.UEVRZipFile))
-                        {
-                            _currentConfig.UEVRZipFile = zipFile;
-                            LogMessage($"  Auto-detected UEVR zip: {fileName}");
-                        }
-                        // Check if this looks like a UEVR config zip (MechWarrior-Win64-Shipping.zip)
-                        else if ((fileName.Contains("Config", StringComparison.OrdinalIgnoreCase) ||
-                                  fileName.Contains(Constants.MechWarriorShippingName, StringComparison.OrdinalIgnoreCase)) &&
-                                 string.IsNullOrEmpty(_currentConfig.UEVRConfigFile))
-                        {
-                            _currentConfig.UEVRConfigFile = zipFile;
-                            LogMessage($"  Auto-detected UEVR config zip: {fileName}");
-                        }
-                        // Otherwise assume it's a mod zip
-                        else
-                        {
-                            if (!_currentConfig.ModZipFiles.Contains(zipFile))
-                            {
-                                _currentConfig.ModZipFiles.Add(zipFile);
-                                LogMessage($"  Auto-detected mod zip: {fileName}");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error auto-detecting zip files: {ex.Message}");
             }
         }
 
@@ -228,15 +179,8 @@ namespace MechwarriorVRLauncher
         {
             var modsDirectory = ExpandEnvironmentVariables(_currentConfig.MechwarriorModsDirectory);
 
-            // If a window is provided, pass its LogMessage method as the additional logger
-            if (window != null)
-            {
-                _modService.ScanInstalledMods(modsDirectory, window.LogMessage);
-            }
-            else
-            {
-                _modService.ScanInstalledMods(modsDirectory);
-            }
+            // LoggingService automatically routes to window via log handler pattern
+            _modService.ScanInstalledMods(modsDirectory);
         }
 
         public Services.ModValidationSummary GetModValidationSummary()
@@ -314,23 +258,47 @@ namespace MechwarriorVRLauncher
         }
 
 
-        public void AutoDetectModsDirectory(SetupWindow? window = null)
+        public void AutoDetectModsDirectory(SetupWindow? window = null, string? platformFilter = null)
         {
             var logAction = window != null ? (Action<string>)window.LogMessage : LogMessage;
-            logAction("Searching for MechWarrior 5 installation via Steam...");
 
-            var modsPath = _steamService.DetectMechWarriorModsDirectory();
+            // Filter services by platform if specified
+            var servicesToTry = string.IsNullOrEmpty(platformFilter)
+                ? _platformServices
+                : _platformServices.Where(s => s.PlatformName.Equals(platformFilter, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (!string.IsNullOrEmpty(modsPath))
+            if (servicesToTry.Count == 0)
             {
-                _currentConfig.MechwarriorModsDirectory = modsPath;
-                logAction($"Found MechWarrior 5 Mods directory: {modsPath}");
-                ScanInstalledMods(window);
+                logAction($"Unknown platform: {platformFilter}");
+                return;
             }
-            else
+
+            // Try each platform service in order
+            foreach (var platformService in servicesToTry)
             {
-                logAction("Could not auto-detect MechWarrior 5. Please browse manually.");
+                // Check if the launcher is installed first
+                if (!platformService.IsLauncherInstalled())
+                {
+                    logAction($"{platformService.PlatformName} is not installed, skipping...");
+                    continue;
+                }
+
+                logAction($"Searching for MechWarrior 5 via {platformService.PlatformName}...");
+                var modsPath = platformService.DetectMechWarriorModsDirectory();
+
+                if (!string.IsNullOrEmpty(modsPath))
+                {
+                    _currentConfig.MechwarriorModsDirectory = modsPath;
+                    logAction($"Found MechWarrior 5 ({platformService.PlatformName}) Mods directory: {modsPath}");
+                    ScanInstalledMods(window);
+                    return;
+                }
+
+                // Service will have logged detailed reason for failure
             }
+
+            // No platform succeeded
+            logAction($"Auto-detection unsuccessful. Please use 'Browse...' to manually select your Mods folder.");
         }
 
 
