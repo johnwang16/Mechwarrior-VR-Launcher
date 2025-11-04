@@ -255,8 +255,6 @@ namespace MechwarriorVRLauncher
                     actualTheme = GetSystemTheme();
                 }
 
-                LogMessage($"Applying theme: {theme} (resolved to: {actualTheme})");
-
                 // Clear existing theme dictionaries
                 Application.Current.Resources.MergedDictionaries.Clear();
 
@@ -268,8 +266,6 @@ namespace MechwarriorVRLauncher
                 // Update hero image based on theme
                 var heroImagePath = actualTheme == "Dark" ? "assets/Hero_Dark.png" : "assets/Hero.png";
                 HeroImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(heroImagePath, UriKind.Relative));
-
-                LogMessage($"Theme {actualTheme} applied successfully");
 
                 // Save theme preference (save the user's choice, not the resolved theme)
                 _currentConfig.Theme = theme;
