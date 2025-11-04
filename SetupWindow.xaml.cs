@@ -4,16 +4,24 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Navigation;
 
 namespace MechwarriorVRLauncher
 {
     public partial class SetupWindow : Window
     {
+        // DWM API for dark mode title bar
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
         private readonly MainWindow _mainWindow;
         private readonly ZipExtractionService _zipService;
         private readonly KeycodeService _keycodeService;
@@ -79,6 +87,59 @@ namespace MechwarriorVRLauncher
             var loggingService = _mainWindow.GetLoggingService();
             loggingService.ClearLogHandler();
             base.OnClosed(e);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            // Set title bar dark mode based on current theme
+            string actualTheme = _mainWindow.GetCurrentConfig().Theme == "Auto" ? GetSystemTheme() : _mainWindow.GetCurrentConfig().Theme;
+            SetTitleBarDarkMode(actualTheme == "Dark");
+        }
+
+        private void SetTitleBarDarkMode(bool useDarkMode)
+        {
+            try
+            {
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero)
+                    return;
+
+                int value = useDarkMode ? 1 : 0;
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref value, sizeof(int));
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Could not set title bar dark mode: {ex.Message}");
+            }
+        }
+
+        private string GetSystemTheme()
+        {
+            try
+            {
+                // Read Windows registry to determine if apps use light theme
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                {
+                    if (key != null)
+                    {
+                        var value = key.GetValue("AppsUseLightTheme");
+                        if (value is int themeValue)
+                        {
+                            // 0 = Dark mode, 1 = Light mode
+                            return themeValue == 0 ? "Dark" : "Light";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Could not read system theme preference: {ex.Message}");
+            }
+
+            // Default to Light if unable to read registry
+            return "Light";
         }
 
         private void CheckSteamVRAvailability()
@@ -623,6 +684,10 @@ namespace MechwarriorVRLauncher
                 if (!string.IsNullOrEmpty(theme))
                 {
                     _mainWindow.ApplyTheme(theme);
+
+                    // Update SetupWindow's title bar to match theme
+                    string actualTheme = theme == "Auto" ? GetSystemTheme() : theme;
+                    SetTitleBarDarkMode(actualTheme == "Dark");
                 }
             }
         }

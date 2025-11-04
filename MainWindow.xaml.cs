@@ -19,6 +19,12 @@ namespace MechwarriorVRLauncher
         // Windows message constants
         private const int WM_SETTINGCHANGE = 0x001A;
 
+        // DWM API for dark mode title bar
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
         private readonly ConfigService _configService;
         private readonly ZipExtractionService _zipService;
         private readonly SteamService _steamService;
@@ -84,6 +90,10 @@ namespace MechwarriorVRLauncher
             // Hook into Windows message loop to listen for theme changes
             HwndSource source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
             source?.AddHook(WndProc);
+
+            // Set initial title bar dark mode based on current theme
+            string actualTheme = _currentConfig.Theme == "Auto" ? GetSystemTheme() : _currentConfig.Theme;
+            SetTitleBarDarkMode(actualTheme == "Dark");
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -218,6 +228,9 @@ namespace MechwarriorVRLauncher
                 var heroImagePath = actualTheme == "Dark" ? "assets/Hero_Dark.png" : "assets/Hero.png";
                 HeroImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(heroImagePath, UriKind.Relative));
 
+                // Update title bar to match theme
+                SetTitleBarDarkMode(actualTheme == "Dark");
+
                 // Save theme preference (save the user's choice, not the resolved theme)
                 _currentConfig.Theme = theme;
                 Task.Run(async () => await SaveConfigAsync());
@@ -253,6 +266,23 @@ namespace MechwarriorVRLauncher
 
             // Default to Light if unable to read registry
             return "Light";
+        }
+
+        private void SetTitleBarDarkMode(bool useDarkMode)
+        {
+            try
+            {
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero)
+                    return;
+
+                int value = useDarkMode ? 1 : 0;
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref value, sizeof(int));
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Could not set title bar dark mode: {ex.Message}");
+            }
         }
 
         private void UpdateConfigFromUI()
