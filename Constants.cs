@@ -4,8 +4,8 @@ namespace MechwarriorVRLauncher
     {
         // App constants
         public const string DefaultConfigFileName = "launcher_config.json";
-        public const string CmdArgLaunchInjectDash = "--launch-inject";
-        public const string CmdArgLaunchInjectSlash = "/launch-inject";
+        public const string CmdArgLaunchInjectDash = "--launch";
+        public const string CmdArgLaunchInjectSlash = "/launch";
 
         // File/Folder Markers
         public const string VortexMarkerFile = "__folder_managed_by_vortex";
@@ -42,7 +42,7 @@ namespace MechwarriorVRLauncher
 
         // Process and DLL Names
         public const string Mw5ProcessName = "MechWarrior-Win64-Shipping";
-        public static readonly string[] UevrDllNames = new[] { "openxr_loader.dll", "LuaVR.dll", "UEVRBackend.dll" };
+        public static readonly string[] UevrDllNames = new[] { "openxr_loader.dll", "UEVRBackend.dll" };
 
         // Steam Constants
         public const string Mw5AppId = "784080";

@@ -22,7 +22,6 @@ namespace MechwarriorVRLauncher
         private readonly KeycodeService _keycodeService;
         private readonly ModService _modService;
         private LauncherConfig _currentConfig;
-        private SetupWindow? _setupWindow;
         private int _showCursorKeyCode = 36;
         private int _menuKeyCode = 45;
         private int _resetViewKeyCode = 120;
@@ -60,13 +59,8 @@ namespace MechwarriorVRLauncher
             // Check if auto-launch and inject was requested via command line
             if (App.AutoLaunchAndInject)
             {
-                // Small delay to ensure UI is fully loaded and config is loaded
-                await Task.Delay(1000);
-                _setupWindow = new SetupWindow(this);
-                _setupWindow.Owner = this;
-                _setupWindow.Show();
-                _setupWindow.LogMessage("Auto-launch and inject requested via command line");
-                await LaunchAndInjectAsync(_setupWindow);
+                LogMessage("Auto-launch and inject requested via command line");
+                await LaunchAndInjectAsync(null);
             }
         }
 
