@@ -10,6 +10,7 @@ namespace MechwarriorVRLauncher
         // File/Folder Markers
         public const string VortexMarkerFile = "__folder_managed_by_vortex";
         public const string ModJsonFile = "mod.json";
+        public const string ModListJsonFile = "modlist.json";
         public const string ModValidationRulesFile = "mwvr_mod_validation_rules.json";
         public const string UevrConfigFile = "config.txt";
         public const string MechWarriorShippingName = "MechWarrior-Win64-Shipping";
@@ -89,7 +90,7 @@ namespace MechwarriorVRLauncher
         public const string UevrGitHubReleasesUrl = "https://github.com/praydog/UEVR/releases";
 
         // GOG Constants
-        public const string GogMw5GameId = "1744110647";
+        public const string GogMw5GameId = "2147483045";
         public const string GogRegistryPath = @"SOFTWARE\WOW6432Node\GOG.com\Games";
         public const string GogRegistryValuePath = "path";
 

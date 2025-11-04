@@ -73,7 +73,7 @@ namespace MechwarriorVRLauncher
             if (App.AutoLaunchAndInject)
             {
                 LogMessage("Auto-launch and inject requested via command line");
-                await LaunchAndInjectAsync(null);
+                await LaunchAndInjectAsync(enableVR: true); // Command line assumes VR mode
             }
         }
 
@@ -130,13 +130,20 @@ namespace MechwarriorVRLauncher
             setupWindow.Show();
         }
 
-        private async void OpenLaunchButton_Click(object sender, RoutedEventArgs e)
+        private async void LaunchButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateConfigFromUI();
 
-            // Start the launch and inject process without opening the setup window
-            // Logs will be buffered and visible when user manually opens setup window
-            await LaunchAndInjectAsync(null);
+            // Launch MW5 without VR (no DLL injection)
+            await LaunchAndInjectAsync(enableVR: false);
+        }
+
+        private async void LaunchVRButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateConfigFromUI();
+
+            // Launch MW5 VR with DLL injection
+            await LaunchAndInjectAsync(enableVR: true);
         }
 
         private async void LoadConfigOnStartup()
@@ -987,6 +994,11 @@ namespace MechwarriorVRLauncher
             MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
+        private void ShowInfoDialog(string title, string message)
+        {
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         private void ShowSuccessDialog(string title, string message)
         {
             MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1029,35 +1041,20 @@ namespace MechwarriorVRLauncher
             return await _steamService.StartSteamVRAsync();
         }
 
-        public async Task LaunchAndInjectAsync(SetupWindow? window)
+        public async Task LaunchAndInjectAsync(bool enableVR)
         {
-            // Helper methods to handle logging/status with or without a window
+            // Helper method for logging (uses LoggingService which routes to window via handler)
             void Log(string message)
             {
-                if (window != null)
-                    window.LogMessage(message);
-                else
-                    LogMessage(message);
-            }
-
-            void SetStatus(string status)
-            {
-                window?.SetStatusText(status);
-            }
-
-            void SetButtonsEnabled(bool enabled)
-            {
-                window?.SetInstallButtonsEnabled(enabled);
+                LogMessage(message);
             }
 
             try
             {
-                SetButtonsEnabled(false);
 
-                // Start SteamVR if configured
-                if (_currentConfig.StartSteamVR)
+                // Start SteamVR if configured and in VR mode
+                if (enableVR && _currentConfig.StartSteamVR)
                 {
-                    SetStatus("Starting SteamVR...");
                     Log("Starting SteamVR...");
 
                     if (!await StartSteamVRAsync())
@@ -1066,23 +1063,33 @@ namespace MechwarriorVRLauncher
                     }
                 }
 
-                SetStatus("Launching MechWarrior 5...");
-                Log("Starting launch and inject process...");
-
-                // Validate UEVR installation directory
-                if (string.IsNullOrWhiteSpace(_currentConfig.UEVRInstallDirectory))
+                if (enableVR)
                 {
-                    ShowErrorDialog("Configuration Error", "UEVR Install Directory is not configured.");
-                    Log("Error: UEVR Install Directory not set");
-                    return;
+                    Log("Starting VR launch and inject process...");
+                }
+                else
+                {
+                    Log("Starting non-VR launch process...");
                 }
 
-                var uevrInstallDir = ExpandEnvironmentVariables(_currentConfig.UEVRInstallDirectory);
-                if (!Directory.Exists(uevrInstallDir))
+                // Validate UEVR installation directory (only needed for VR mode)
+                string? uevrInstallDir = null;
+                if (enableVR)
                 {
-                    ShowErrorDialog("Configuration Error", $"UEVR Install Directory not found: {uevrInstallDir}");
-                    Log($"Error: UEVR Install Directory not found: {uevrInstallDir}");
-                    return;
+                    if (string.IsNullOrWhiteSpace(_currentConfig.UEVRInstallDirectory))
+                    {
+                        ShowErrorDialog("Configuration Error", "UEVR Install Directory is not configured.");
+                        Log("Error: UEVR Install Directory not set");
+                        return;
+                    }
+
+                    uevrInstallDir = ExpandEnvironmentVariables(_currentConfig.UEVRInstallDirectory);
+                    if (!Directory.Exists(uevrInstallDir))
+                    {
+                        ShowErrorDialog("Configuration Error", $"UEVR Install Directory not found: {uevrInstallDir}");
+                        Log($"Error: UEVR Install Directory not found: {uevrInstallDir}");
+                        return;
+                    }
                 }
 
                 // Validate MechWarrior directory
@@ -1118,18 +1125,71 @@ namespace MechwarriorVRLauncher
                     return;
                 }
 
-                // Verify UEVR DLLs exist
+                // Verify UEVR DLLs exist (only for VR mode)
                 var dllPaths = new List<string>();
-                foreach (var dllName in Constants.UevrDllNames)
+                if (enableVR && uevrInstallDir != null)
                 {
-                    var dllPath = Path.Combine(uevrInstallDir, dllName);
-                    if (!File.Exists(dllPath))
+                    foreach (var dllName in Constants.UevrDllNames)
                     {
-                        ShowErrorDialog("Configuration Error", $"UEVR DLL not found: {dllPath}");
-                        Log($"Error: UEVR DLL not found: {dllPath}");
-                        return;
+                        var dllPath = Path.Combine(uevrInstallDir, dllName);
+                        if (!File.Exists(dllPath))
+                        {
+                            ShowErrorDialog("Configuration Error", $"UEVR DLL not found: {dllPath}");
+                            Log($"Error: UEVR DLL not found: {dllPath}");
+                            return;
+                        }
+                        dllPaths.Add(dllPath);
                     }
-                    dllPaths.Add(dllPath);
+                }
+
+                // Check if VR mods exist and update modlist.json if needed
+                if (enableVR)
+                {
+                    Log("Checking for VR mods in modlist.json...");
+                    int vrModCount = _modService.GetVRModCount(modsDirectory);
+
+                    if (vrModCount < 0)
+                    {
+                        Log("Warning: Could not read modlist.json, continuing anyway...");
+                    }
+                    else if (vrModCount == 0)
+                    {
+                        // No VR mods found in modlist.json, inform user and launch without VR
+                        ShowInfoDialog("VR Mods Not Found",
+                            "No MechWarriorVR mods were detected in modlist.json.\n\n" +
+                            "Please enable the MechWarriorVR mods in the game's mod list first.\n\n" +
+                            "Launching in non-VR mode...");
+                        enableVR = false;
+                        Log("Switching to non-VR launch mode");
+                    }
+                    else
+                    {
+                        // VR mods found, enable them
+                        if (_modService.UpdateVRModsStatus(modsDirectory, true))
+                        {
+                            Log($"Enabled {vrModCount} VR mod(s) in modlist.json");
+                        }
+                        else
+                        {
+                            Log("Warning: Could not update modlist.json, continuing anyway...");
+                        }
+                    }
+                }
+                else
+                {
+                    // Non-VR mode: check if there are VR mods to disable
+                    int vrModCount = _modService.GetVRModCount(modsDirectory);
+                    if (vrModCount > 0)
+                    {
+                        if (_modService.UpdateVRModsStatus(modsDirectory, false))
+                        {
+                            Log($"Disabled {vrModCount} VR mod(s) in modlist.json");
+                        }
+                        else
+                        {
+                            Log("Warning: Could not update modlist.json, continuing anyway...");
+                        }
+                    }
                 }
 
                 Log($"Launching MechWarrior 5: {mw5ExePath}");
@@ -1151,37 +1211,52 @@ namespace MechwarriorVRLauncher
                 }
 
                 Log($"MechWarrior 5 launched (PID: {process.Id})");
-                SetStatus("Waiting for process to initialize...");
 
-                // Wait a moment for the process to initialize
-                await Task.Delay(3000);
+                bool injectionSuccess = true; // Default to success for non-VR mode
 
-                // Inject DLLs
-                Log("Starting DLL injection...");
-                SetStatus("Injecting UEVR DLLs...");
-
-                bool injectionSuccess = true;
-                foreach (var dllPath in dllPaths)
+                // Only inject DLLs in VR mode
+                if (enableVR && dllPaths.Count > 0)
                 {
-                    var dllName = Path.GetFileName(dllPath);
-                    Log($"Injecting {dllName}...");
+                    // Wait a moment for the process to initialize
+                    Log("Waiting for process to initialize...");
+                    await Task.Delay(3000);
 
-                    if (!InjectDll(process, dllPath))
+                    // Inject DLLs
+                    Log("Starting DLL injection...");
+
+                    foreach (var dllPath in dllPaths)
                     {
-                        Log($"Failed to inject {dllName}");
-                        ShowErrorDialog("Injection Error", $"Failed to inject {dllName}");
-                        injectionSuccess = false;
-                        break;
-                    }
+                        var dllName = Path.GetFileName(dllPath);
+                        Log($"Injecting {dllName}...");
 
-                    Log($"Successfully injected {dllName}");
-                    await Task.Delay(500); // Small delay between injections
+                        if (!InjectDll(process, dllPath))
+                        {
+                            Log($"Failed to inject {dllName}");
+                            ShowErrorDialog("Injection Error", $"Failed to inject {dllName}");
+                            injectionSuccess = false;
+                            break;
+                        }
+
+                        Log($"Successfully injected {dllName}");
+                        await Task.Delay(500); // Small delay between injections
+                    }
+                }
+                else
+                {
+                    Log("Non-VR mode: Skipping DLL injection");
                 }
 
                 if (injectionSuccess)
                 {
-                    Log("All DLLs injected successfully!");
-                    SetStatus("Injection complete - MechWarrior 5 VR is ready");
+                    if (enableVR)
+                    {
+                        Log("All DLLs injected successfully!");
+                        Log("MechWarrior 5 VR is ready");
+                    }
+                    else
+                    {
+                        Log("MechWarrior 5 launched successfully");
+                    }
 
                     // Check if auto-exit is enabled (from command line or config)
                     bool shouldAutoExit = App.AutoLaunchAndInject || _currentConfig.AutoExitAfterLaunch;
@@ -1193,18 +1268,13 @@ namespace MechwarriorVRLauncher
                 }
                 else
                 {
-                    SetStatus("Injection failed");
+                    Log("Injection failed");
                 }
             }
             catch (Exception ex)
             {
                 Log($"Error during launch and inject: {ex.Message}");
                 ShowErrorDialog("Launch Error", $"An error occurred: {ex.Message}");
-                SetStatus("Launch failed");
-            }
-            finally
-            {
-                SetButtonsEnabled(true);
             }
         }
 

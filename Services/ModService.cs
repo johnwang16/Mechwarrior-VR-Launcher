@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text.Json;
+using MechwarriorVRLauncher.Models;
 
 namespace MechwarriorVRLauncher.Services
 {
@@ -465,6 +466,195 @@ namespace MechwarriorVRLauncher.Services
                 Log($"Error scanning mods: {ex.Message}");
                 return modInfos;
             }
+        }
+
+        /// <summary>
+        /// Reads the modlist.json file from the mods directory
+        /// </summary>
+        /// <param name="modsDirectory">Path to the mods directory</param>
+        /// <returns>ModListConfig object, or null if not found or invalid</returns>
+        public ModListConfig? ReadModList(string modsDirectory)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(modsDirectory) || !_fileSystem.Directory.Exists(modsDirectory))
+                {
+                    return null;
+                }
+
+                var modListPath = _fileSystem.Path.Combine(modsDirectory, Constants.ModListJsonFile);
+                if (!_fileSystem.File.Exists(modListPath))
+                {
+                    _loggingService.LogMessage($"modlist.json not found at: {modListPath}");
+                    return null;
+                }
+
+                var jsonContent = _fileSystem.File.ReadAllText(modListPath);
+                var modList = JsonSerializer.Deserialize<ModListConfig>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (modList != null)
+                {
+                    _loggingService.LogMessage($"Loaded modlist.json - Game Version: {modList.GameVersion}, Mods: {modList.ModStatus.Count}");
+                }
+
+                return modList;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogMessage($"Error reading modlist.json: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Writes the modlist.json file to the mods directory
+        /// </summary>
+        /// <param name="modsDirectory">Path to the mods directory</param>
+        /// <param name="modList">ModListConfig object to write</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool WriteModList(string modsDirectory, ModListConfig modList)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(modsDirectory) || !_fileSystem.Directory.Exists(modsDirectory))
+                {
+                    _loggingService.LogMessage("Invalid mods directory");
+                    return false;
+                }
+
+                var modListPath = _fileSystem.Path.Combine(modsDirectory, Constants.ModListJsonFile);
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                var jsonContent = JsonSerializer.Serialize(modList, options);
+                _fileSystem.File.WriteAllText(modListPath, jsonContent);
+
+                _loggingService.LogMessage($"Saved modlist.json to: {modListPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogMessage($"Error writing modlist.json: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the enabled status of a specific mod in the modlist
+        /// </summary>
+        /// <param name="modsDirectory">Path to the mods directory</param>
+        /// <param name="modName">Name of the mod to update</param>
+        /// <param name="enabled">New enabled status</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool UpdateModStatus(string modsDirectory, string modName, bool enabled)
+        {
+            var modList = ReadModList(modsDirectory);
+            if (modList == null)
+            {
+                _loggingService.LogMessage("Could not read modlist.json");
+                return false;
+            }
+
+            if (modList.ModStatus.ContainsKey(modName))
+            {
+                modList.ModStatus[modName].Enabled = enabled;
+                _loggingService.LogMessage($"Updated {modName}: bEnabled = {enabled}");
+            }
+            else
+            {
+                modList.ModStatus[modName] = new ModStatus { Enabled = enabled };
+                _loggingService.LogMessage($"Added {modName}: bEnabled = {enabled}");
+            }
+
+            return WriteModList(modsDirectory, modList);
+        }
+
+        /// <summary>
+        /// Gets the count of MechWarriorVR* mods in modlist.json
+        /// </summary>
+        /// <param name="modsDirectory">Path to the mods directory</param>
+        /// <returns>Number of VR mods found, or -1 on error</returns>
+        public int GetVRModCount(string modsDirectory)
+        {
+            var modList = ReadModList(modsDirectory);
+            if (modList == null)
+            {
+                _loggingService.LogMessage("Could not read modlist.json");
+                return -1;
+            }
+
+            // Find all mods that start with "MechWarriorVR"
+            var vrMods = modList.ModStatus.Keys.Where(modName => modName.StartsWith("MechWarriorVR", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (vrMods.Count == 0)
+            {
+                _loggingService.LogMessage("No MechWarriorVR* mods found in modlist.json");
+            }
+            else
+            {
+                _loggingService.LogMessage($"Found {vrMods.Count} MechWarriorVR mod(s) in modlist.json");
+            }
+
+            return vrMods.Count;
+        }
+
+        /// <summary>
+        /// Updates the enabled status of all MechWarriorVR* mods in modlist.json
+        /// </summary>
+        /// <param name="modsDirectory">Path to the mods directory</param>
+        /// <param name="enabled">New enabled status</param>
+        /// <returns>True if successful, false on error</returns>
+        public bool UpdateVRModsStatus(string modsDirectory, bool enabled)
+        {
+            var modList = ReadModList(modsDirectory);
+            if (modList == null)
+            {
+                _loggingService.LogMessage("Could not read modlist.json");
+                return false;
+            }
+
+            // Find all mods that start with "MechWarriorVR"
+            var vrMods = modList.ModStatus.Keys.Where(modName => modName.StartsWith("MechWarriorVR", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (vrMods.Count == 0)
+            {
+                _loggingService.LogMessage("No MechWarriorVR* mods to update");
+                return true; // Not an error, just nothing to do
+            }
+
+            // Check if any mod needs status change
+            bool needsUpdate = false;
+            foreach (var modName in vrMods)
+            {
+                if (modList.ModStatus[modName].Enabled != enabled)
+                {
+                    needsUpdate = true;
+                    break;
+                }
+            }
+
+            if (!needsUpdate)
+            {
+                _loggingService.LogMessage($"All {vrMods.Count} VR mod(s) already have bEnabled = {enabled}, no update needed");
+                return true;
+            }
+
+            // Update mods that need changing
+            _loggingService.LogMessage($"Updating {vrMods.Count} MechWarriorVR mod(s):");
+            foreach (var modName in vrMods)
+            {
+                modList.ModStatus[modName].Enabled = enabled;
+                _loggingService.LogMessage($"  {modName}: bEnabled = {enabled}");
+            }
+
+            return WriteModList(modsDirectory, modList);
         }
     }
 }

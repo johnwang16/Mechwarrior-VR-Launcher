@@ -49,5 +49,8 @@ namespace MechwarriorVRLauncher.Models
 
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "Auto"; // Default: Auto (follow system theme)
+
+        [JsonPropertyName("enableVRMod")]
+        public bool EnableVRMod { get; set; } = true; // Default: true
     }
 }

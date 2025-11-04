@@ -27,24 +27,34 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="1" Margin="0,0,0,20">
-            <!-- Main Action Buttons -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
-                <Button x:Name="OpenInstallerButton"
-                        Content="Setup"
-                        Click="OpenInstallerButton_Click"
+            <!-- Launch Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+                <Button x:Name="LaunchButton"
+                        Content="Launch MW5"
+                        Click="LaunchButton_Click"
                         MinWidth="180"
                         Height="50"
                         FontSize="14"
                         Margin="0,0,15,0"
                         Padding="15,10"/>
-                <Button x:Name="OpenLaunchButton"
+                <Button x:Name="LaunchVRButton"
                         Content="Launch MW5 VR"
-                        Click="OpenLaunchButton_Click"
+                        Click="LaunchVRButton_Click"
                         MinWidth="180"
                         Height="50"
                         FontSize="14"
                         Padding="15,10"/>
             </StackPanel>
+
+            <!-- Setup Button -->
+            <Button x:Name="OpenInstallerButton"
+                    Content="Setup"
+                    Click="OpenInstallerButton_Click"
+                    MinWidth="180"
+                    Height="40"
+                    FontSize="13"
+                    HorizontalAlignment="Center"
+                    Padding="15,10"/>
         </StackPanel>
     </Grid>
 </Window>
