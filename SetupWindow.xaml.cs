@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Navigation;
 
@@ -162,6 +163,16 @@ namespace MechwarriorVRLauncher
             // Load launcher options
             StartSteamVRCheckBox.IsChecked = config.StartSteamVR;
             AutoExitCheckBox.IsChecked = config.AutoExitAfterLaunch;
+
+            // Load theme selection
+            foreach (ComboBoxItem item in ThemeComboBox.Items)
+            {
+                if (item.Tag?.ToString() == config.Theme)
+                {
+                    ThemeComboBox.SelectedItem = item;
+                    break;
+                }
+            }
         }
 
         public void UpdateConfig()
@@ -560,6 +571,19 @@ namespace MechwarriorVRLauncher
             catch (Exception ex)
             {
                 LogMessage($"Error opening URL: {ex.Message}");
+            }
+        }
+
+        // Theme Selection Event Handler
+        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ThemeComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                var theme = selectedItem.Tag?.ToString();
+                if (!string.IsNullOrEmpty(theme))
+                {
+                    _mainWindow.ApplyTheme(theme);
+                }
             }
         }
     }

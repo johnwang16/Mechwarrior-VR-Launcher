@@ -7,13 +7,18 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace MechwarriorVRLauncher
 {
     public partial class MainWindow : Window
     {
+        // Windows message constants
+        private const int WM_SETTINGCHANGE = 0x001A;
+
         private readonly ConfigService _configService;
         private readonly ZipExtractionService _zipService;
         private readonly SteamService _steamService;
@@ -64,6 +69,33 @@ namespace MechwarriorVRLauncher
             }
         }
 
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            // Hook into Windows message loop to listen for theme changes
+            HwndSource source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            source?.AddHook(WndProc);
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            // Listen for system settings changes
+            if (msg == WM_SETTINGCHANGE)
+            {
+                // Check if theme is set to Auto and reapply if so
+                if (_currentConfig.Theme == "Auto")
+                {
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        ApplyTheme("Auto");
+                    }));
+                }
+            }
+
+            return IntPtr.Zero;
+        }
+
         // Public methods for accessing config and services
         public LauncherConfig GetCurrentConfig()
         {
@@ -105,6 +137,9 @@ namespace MechwarriorVRLauncher
             {
                 _currentConfig = await _configService.LoadConfigAsync();
                 UpdateUIFromConfig();
+
+                // Apply saved theme
+                ApplyTheme(_currentConfig.Theme);
 
                 // Auto-detect MechWarrior directory if not set
                 if (string.IsNullOrWhiteSpace(_currentConfig.MechwarriorModsDirectory))
@@ -207,6 +242,70 @@ namespace MechwarriorVRLauncher
         public Services.ModValidationSummary GetModValidationSummary()
         {
             return _modService.GetLastValidationSummary();
+        }
+
+        public void ApplyTheme(string theme)
+        {
+            try
+            {
+                // If theme is "Auto", detect system theme
+                string actualTheme = theme;
+                if (theme == "Auto")
+                {
+                    actualTheme = GetSystemTheme();
+                }
+
+                LogMessage($"Applying theme: {theme} (resolved to: {actualTheme})");
+
+                // Clear existing theme dictionaries
+                Application.Current.Resources.MergedDictionaries.Clear();
+
+                // Load the selected theme using pack URI
+                var themeUri = new Uri($"/MechwarriorVRLauncher;component/Themes/{actualTheme}Theme.xaml", UriKind.Relative);
+                var themeDict = new ResourceDictionary { Source = themeUri };
+                Application.Current.Resources.MergedDictionaries.Add(themeDict);
+
+                // Update hero image based on theme
+                var heroImagePath = actualTheme == "Dark" ? "assets/Hero_Dark.png" : "assets/Hero.png";
+                HeroImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(heroImagePath, UriKind.Relative));
+
+                LogMessage($"Theme {actualTheme} applied successfully");
+
+                // Save theme preference (save the user's choice, not the resolved theme)
+                _currentConfig.Theme = theme;
+                Task.Run(async () => await SaveConfigAsync());
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error applying theme: {ex.Message}");
+            }
+        }
+
+        private string GetSystemTheme()
+        {
+            try
+            {
+                // Read Windows registry to determine if apps use light theme
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                {
+                    if (key != null)
+                    {
+                        var value = key.GetValue("AppsUseLightTheme");
+                        if (value is int themeValue)
+                        {
+                            // 0 = Dark mode, 1 = Light mode
+                            return themeValue == 0 ? "Dark" : "Light";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Could not read system theme preference: {ex.Message}");
+            }
+
+            // Default to Light if unable to read registry
+            return "Light";
         }
 
         private void UpdateConfigFromUI()

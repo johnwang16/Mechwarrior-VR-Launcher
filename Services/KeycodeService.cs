@@ -56,7 +56,7 @@ namespace MechwarriorVRLauncher.Services
             // Handle numpad keys specially
             if (isNumpad)
             {
-                // Convert "NumPad0" to "Numpad 0", "Add" to "Numpad +", etc.
+                // Convert "Add" to "Numpad +", etc.
                 if (key == Key.Add)
                     return "Numpad+";
                 else if (key == Key.Subtract)

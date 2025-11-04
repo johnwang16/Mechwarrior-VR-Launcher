@@ -46,5 +46,8 @@ namespace MechwarriorVRLauncher.Models
 
         [JsonPropertyName("installUEVRConfig")]
         public bool InstallUEVRConfig { get; set; } = true; // Default: true
+
+        [JsonPropertyName("theme")]
+        public string Theme { get; set; } = "Auto"; // Default: Auto (follow system theme)
     }
 }

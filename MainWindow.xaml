@@ -6,7 +6,9 @@
         Width="500"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
-        Icon="assets/Logo.png">
+        Icon="assets/Logo.png"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource ForegroundBrush}">
 
     <Grid Margin="30">
         <Grid.RowDefinitions>
@@ -16,7 +18,8 @@
         </Grid.RowDefinitions>
 
         <!-- Hero Image -->
-        <Image Grid.Row="0"
+        <Image x:Name="HeroImage"
+               Grid.Row="0"
                Source="assets/Hero.png"
                Stretch="Uniform"
                MaxHeight="150"

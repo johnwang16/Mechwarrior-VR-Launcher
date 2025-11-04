@@ -31,5 +31,6 @@
   <ItemGroup>
     <Resource Include="assets\Logo.png" />
     <Resource Include="assets\Hero.png" />
+    <Resource Include="assets\Hero_Dark.png" />
   </ItemGroup>
 </Project>
