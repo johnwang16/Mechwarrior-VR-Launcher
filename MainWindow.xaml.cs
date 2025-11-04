@@ -1129,11 +1129,7 @@ namespace MechwarriorVRLauncher
                     // Check if auto-exit is enabled (from command line or config)
                     bool shouldAutoExit = App.AutoLaunchAndInject || _currentConfig.AutoExitAfterLaunch;
 
-                    if (!shouldAutoExit)
-                    {
-                        ShowSuccessDialog("Success", "UEVR has been injected successfully.");
-                    }
-                    else
+                    if (shouldAutoExit)
                     {
                         Application.Current.Shutdown();
                     }
