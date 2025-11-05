@@ -2,6 +2,11 @@ name: Build and Zip .NET 6 App
 
 on:
   workflow_dispatch:
+    inputs:
+      release_title:
+        description: 'Release title (leave empty to use default)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -24,11 +29,21 @@ jobs:
     - name: Get version from project file
       id: get_version
       run: |
-        $version = Select-Xml -Path .\**\*.csproj -XPath "/Project/PropertyGroup/Version" | Select-Object -First 1 -ExpandProperty Node | Select-Object -ExpandProperty InnerText
+        $version = Select-Xml -Path .\MechwarriorVRLauncher.csproj -XPath "/Project/PropertyGroup/Version" | Select-Object -First 1 -ExpandProperty Node | Select-Object -ExpandProperty InnerText
         if ([string]::IsNullOrEmpty($version)) {
           $version = "1.0.0"
         }
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+    
+    - name: Set release title
+      id: set_title
+      run: |
+        $title = "${{ github.event.inputs.release_title }}"
+        if ([string]::IsNullOrEmpty($title)) {
+          $title = "MechWarrior VR Launcher v${{ steps.get_version.outputs.VERSION }}"
+        }
+        echo "TITLE=$title" >> $env:GITHUB_OUTPUT
       shell: pwsh
     
     - name: Publish
@@ -38,8 +53,13 @@ jobs:
       run: Compress-Archive -Path ./publish/* -DestinationPath MWVRLauncher-${{ steps.get_version.outputs.VERSION }}.zip
       shell: pwsh
     
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: MWVRLauncher-${{ steps.get_version.outputs.VERSION }}
-        path: MWVRLauncher-${{ steps.get_version.outputs.VERSION }}.zip
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: ${{ steps.set_title.outputs.TITLE }}
+        files: MWVRLauncher-${{ steps.get_version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
