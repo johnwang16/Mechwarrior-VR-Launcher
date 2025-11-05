@@ -1,17 +1,14 @@
 name: Build and Zip .NET 6 App
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup .NET 6
       uses: actions/setup-dotnet@v3
@@ -24,9 +21,6 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
     
-    - name: Publish
-      run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o ./publish
-    
     - name: Get version from project file
       id: get_version
       run: |
@@ -37,12 +31,15 @@ jobs:
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
       shell: pwsh
     
+    - name: Publish
+      run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o ./publish
+    
     - name: Zip the published app
       run: Compress-Archive -Path ./publish/* -DestinationPath MWVRLauncher-${{ steps.get_version.outputs.VERSION }}.zip
       shell: pwsh
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: MWVRLauncher-${{ steps.get_version.outputs.VERSION }}
         path: MWVRLauncher-${{ steps.get_version.outputs.VERSION }}.zip
