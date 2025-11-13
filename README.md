@@ -14,7 +14,7 @@ A launcher and setup application for MechWarrior 5: Mercenaries VR that simplifi
 
 ## Command line parameters
 
-`--launch` or `/launch` can be used to automatically launch MW5 in VR mode. The launch options in the setup screen can be used to modify the behavior
+`--launch-inject` or `/launch-inject` can be used to automatically launch MW5 in VR mode. The launch options in the setup screen can be used to modify the behavior
 
 ## Attribution
 
