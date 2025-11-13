@@ -19,6 +19,7 @@ namespace MechwarriorVRLauncher.Services
         private readonly LoggingService _loggingService;
 
         // Windows API imports for DLL injection
+        // Adapted from Custom-UEVR-Injector: https://github.com/mirudo2/Custom-UEVR-Injector
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
 
@@ -51,6 +52,11 @@ namespace MechwarriorVRLauncher.Services
             _loggingService = loggingService;
         }
 
+        /// <summary>
+        /// Injects a DLL into the target process using the LoadLibraryA technique.
+        /// Adapted from Custom-UEVR-Injector by mirudo2
+        /// https://github.com/mirudo2/Custom-UEVR-Injector
+        /// </summary>
         public bool InjectDll(Process targetProcess, string dllPath)
         {
             try
