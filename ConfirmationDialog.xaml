@@ -6,7 +6,9 @@
         Width="600"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
-        Icon="assets/Logo.png">
+        Icon="assets/Logo.png"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource ForegroundBrush}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -25,9 +27,10 @@
 
         <!-- Scrollable List of Items to Delete -->
         <Border Grid.Row="1"
-                BorderBrush="Gray"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                Margin="0,0,0,20">
+                Margin="0,0,0,20"
+                Background="{DynamicResource SurfaceBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <TextBlock x:Name="ItemsTextBlock"

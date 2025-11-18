@@ -1,3 +1,5 @@
+using MechwarriorVRLauncher.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -13,6 +15,14 @@ namespace MechwarriorVRLauncher
 
             // Build the text to display
             ItemsTextBlock.Text = string.Join("\n\n", itemsToDelete);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            // Set title bar dark mode based on current theme
+            WindowHelper.ApplyDarkModeToTitleBar(this, WindowHelper.IsDarkThemeActive());
         }
 
         private void ContinueButton_Click(object sender, RoutedEventArgs e)

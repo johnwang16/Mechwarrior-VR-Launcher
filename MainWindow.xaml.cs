@@ -1,3 +1,4 @@
+using MechwarriorVRLauncher.Helpers;
 using MechwarriorVRLauncher.Models;
 using MechwarriorVRLauncher.Services;
 using Microsoft.Win32;
@@ -18,12 +19,6 @@ namespace MechwarriorVRLauncher
     {
         // Windows message constants
         private const int WM_SETTINGCHANGE = 0x001A;
-
-        // DWM API for dark mode title bar
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
-
-        [DllImport("dwmapi.dll", PreserveSig = true)]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
         private readonly ConfigService _configService;
         private readonly ZipExtractionService _zipService;
@@ -93,7 +88,7 @@ namespace MechwarriorVRLauncher
 
             // Set initial title bar dark mode based on current theme
             string actualTheme = _currentConfig.Theme == "Auto" ? GetSystemTheme() : _currentConfig.Theme;
-            SetTitleBarDarkMode(actualTheme == "Dark");
+            WindowHelper.ApplyDarkModeToTitleBar(this, actualTheme == "Dark");
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -225,11 +220,11 @@ namespace MechwarriorVRLauncher
                 Application.Current.Resources.MergedDictionaries.Add(themeDict);
 
                 // Update hero image based on theme
-                var heroImagePath = actualTheme == "Dark" ? "assets/Hero_Dark.png" : "assets/Hero.png";
+                var heroImagePath = WindowHelper.IsDarkThemeActive() ? "assets/Hero_Dark.png" : "assets/Hero.png";
                 HeroImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(heroImagePath, UriKind.Relative));
 
                 // Update title bar to match theme
-                SetTitleBarDarkMode(actualTheme == "Dark");
+                WindowHelper.ApplyDarkModeToTitleBar(this, WindowHelper.IsDarkThemeActive());
 
                 // Save theme preference (save the user's choice, not the resolved theme)
                 _currentConfig.Theme = theme;
@@ -266,23 +261,6 @@ namespace MechwarriorVRLauncher
 
             // Default to Light if unable to read registry
             return "Light";
-        }
-
-        private void SetTitleBarDarkMode(bool useDarkMode)
-        {
-            try
-            {
-                var hwnd = new WindowInteropHelper(this).Handle;
-                if (hwnd == IntPtr.Zero)
-                    return;
-
-                int value = useDarkMode ? 1 : 0;
-                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref value, sizeof(int));
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Could not set title bar dark mode: {ex.Message}");
-            }
         }
 
         private void UpdateConfigFromUI()
@@ -404,8 +382,10 @@ namespace MechwarriorVRLauncher
                                              $"\n\nInstallation will {action} these mods.\n\n" +
                                              "Do you want to continue?";
 
-                        var result = MessageBox.Show(vortexMessage, "Vortex-Managed Mods Detected", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                        if (result != MessageBoxResult.Yes)
+                        var dialog = new MessageDialog(vortexMessage, "Vortex-Managed Mods Detected", MessageDialogButton.YesNo);
+                        dialog.Owner = Application.Current.MainWindow;
+                        var result = dialog.ShowDialog();
+                        if (result != true)
                         {
                             window.LogMessage("Installation cancelled by user due to Vortex-managed mods warning");
                             return false;
@@ -1021,17 +1001,23 @@ namespace MechwarriorVRLauncher
 
         private void ShowErrorDialog(string title, string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+            var dialog = new MessageDialog(message, title);
+            dialog.Owner = this;
+            dialog.ShowDialog();
         }
 
         private void ShowInfoDialog(string title, string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            var dialog = new MessageDialog(message, title);
+            dialog.Owner = this;
+            dialog.ShowDialog();
         }
 
         private void ShowSuccessDialog(string title, string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            var dialog = new MessageDialog(message, title);
+            dialog.Owner = this;
+            dialog.ShowDialog();
         }
 
         public string ExpandEnvironmentVariables(string path)

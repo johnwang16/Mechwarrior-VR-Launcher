@@ -1,0 +1,52 @@
+<Window x:Class="MechwarriorVRLauncher.MessageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Message"
+        Height="Auto"
+        Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Icon="assets/Logo.png"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource ForegroundBrush}"
+        SizeToContent="Height">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Message Text -->
+        <TextBlock Grid.Row="0"
+                   x:Name="MessageTextBlock"
+                   FontSize="13"
+                   Margin="0,0,0,20"
+                   TextWrapping="Wrap"/>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button x:Name="YesButton"
+                    Content="Yes"
+                    Click="YesButton_Click"
+                    MinWidth="80"
+                    Margin="0,0,10,0"
+                    Padding="10,5"
+                    Visibility="Collapsed"/>
+            <Button x:Name="NoButton"
+                    Content="No"
+                    Click="NoButton_Click"
+                    MinWidth="80"
+                    Padding="10,5"
+                    Visibility="Collapsed"/>
+            <Button x:Name="OkButton"
+                    Content="OK"
+                    Click="OkButton_Click"
+                    MinWidth="80"
+                    Padding="10,5"
+                    IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
